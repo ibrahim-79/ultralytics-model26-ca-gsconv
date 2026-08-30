@@ -47,7 +47,9 @@ from .block import (
     CBFuse,
     CBLinear,
     ContrastiveHead,
+    CoordAtt,          # <-- add this
     GhostBottleneck,
+    GSConv,
     HGBlock,
     HGStem,
     ImagePoolingAttn,
@@ -59,6 +61,7 @@ from .block import (
     ResNetLayer,
     SCDown,
     TorchVision,
+    VoVGSCSP,
 )
 from .conv import (
     CBAM,
@@ -146,6 +149,7 @@ __all__ = (
     "Classify",
     "Concat",
     "ContrastiveHead",
+    "CoordAtt",
     "Conv",
     "Conv2",
     "ConvTranspose",
@@ -158,6 +162,7 @@ __all__ = (
     "Focus",
     "GhostBottleneck",
     "GhostConv",
+    "GSConv",
     "HGBlock",
     "HGStem",
     "ImagePoolingAttn",
@@ -191,4 +196,7 @@ __all__ = (
     "YOLOESegment",
     "YOLOESegment26",
     "v10Detect",
+    "VoVGSCSP",
+    
 )
+

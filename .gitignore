@@ -211,3 +211,4 @@ results.csv
 fuzz-sources/
 fuzz-datasets/
 fuzz-models/
+ultralytics/cfg/datasets/dataset/

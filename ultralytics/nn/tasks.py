@@ -46,6 +46,7 @@ from ultralytics.nn.modules import (
     Conv,
     Conv2,
     ConvTranspose,
+    CoordAtt,
     Depth,
     Detect,
     DWConv,
@@ -53,6 +54,7 @@ from ultralytics.nn.modules import (
     Focus,
     GhostBottleneck,
     GhostConv,
+    GSConv,
     HGBlock,
     HGStem,
     ImagePoolingAttn,
@@ -76,6 +78,7 @@ from ultralytics.nn.modules import (
     YOLOESegment,
     YOLOESegment26,
     v10Detect,
+    VoVGSCSP,
 )
 from ultralytics.utils import (
     DEFAULT_CFG_DICT,
@@ -1971,6 +1974,8 @@ def parse_model(d, ch, verbose=True):
             Conv,
             ConvTranspose,
             GhostConv,
+            GSConv,
+            VoVGSCSP,
             Bottleneck,
             GhostBottleneck,
             SPP,
@@ -2007,6 +2012,7 @@ def parse_model(d, ch, verbose=True):
         {
             BottleneckCSP,
             C1,
+            VoVGSCSP,
             C2,
             C2f,
             C3k2,
@@ -2110,6 +2116,9 @@ def parse_model(d, ch, verbose=True):
             args = [c1, c2, *args[1:]]
         elif m is CBFuse:
             c2 = ch[f[-1]]
+        elif m is CoordAtt:
+            c2 = ch[f]
+            args = [c2, *args]   
         elif m in frozenset({TorchVision, Index}):
             c2 = args[0]
             c1 = ch[f]

@@ -2073,3 +2073,94 @@ class RealNVP(nn.Module):
             self.float()
         z, log_det = self.backward_p(x)
         return self.prior.log_prob(z) + log_det
+class CoordAtt(nn.Module):
+    """Coordinate Attention"""
+
+    def __init__(self, c1, reduction=32):
+        super().__init__()
+        self.pool_h = nn.AdaptiveAvgPool2d((None, 1))  # squeeze along W -> (N,C,H,1)
+        self.pool_w = nn.AdaptiveAvgPool2d((1, None))  # squeeze along H -> (N,C,1,W)
+
+        mip = max(8, c1 // reduction)
+        self.conv1 = nn.Conv2d(c1, mip, kernel_size=1, stride=1, padding=0)
+        self.bn1 = nn.BatchNorm2d(mip)
+        self.act = nn.SiLU()  # matches YOLO's default activation (paper uses h_swish)
+
+        self.conv_h = nn.Conv2d(mip, c1, kernel_size=1, stride=1, padding=0)
+        self.conv_w = nn.Conv2d(mip, c1, kernel_size=1, stride=1, padding=0)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        identity = x
+        n, c, h, w = x.size()
+
+        x_h = self.pool_h(x)                        # N,C,H,1
+        x_w = self.pool_w(x).permute(0, 1, 3, 2)     # N,C,W,1
+
+        y = torch.cat([x_h, x_w], dim=2)             # N,C,H+W,1
+        y = self.act(self.bn1(self.conv1(y)))
+
+        x_h, x_w = torch.split(y, [h, w], dim=2)
+        x_w = x_w.permute(0, 1, 3, 2)                # N,C,1,W
+
+        a_h = self.sigmoid(self.conv_h(x_h))         # N,C,H,1
+        a_w = self.sigmoid(self.conv_w(x_w))         # N,C,1,W
+
+        return identity * a_h * a_w
+
+class GSConv(nn.Module):
+    """GSConv: hybrid depthwise/standard conv for lightweight neck design.
+
+    Splits output channels in half — one half from a standard Conv, the other half
+    from a cheap DWConv applied to that output — then shuffles channels together.
+    """
+
+    def __init__(self, c1, c2, k=1, s=1, g=1, act=True):
+        super().__init__()
+        c_ = c2 // 2
+        self.cv1 = Conv(c1, c_, k, s, None, g, act=act)
+        self.cv2 = Conv(c_, c_, 5, 1, None, c_, act=act)  # depthwise (groups=c_)
+
+    def forward(self, x):
+        x1 = self.cv1(x)
+        x2 = torch.cat((x1, self.cv2(x1)), 1)
+        # channel shuffle: mix the "standard-conv half" and "depthwise half" together
+        b, n, h, w = x2.shape
+        b_n = b * n // 2
+        y = x2.reshape(b_n, 2, h * w)
+        y = y.permute(1, 0, 2)
+        y = y.reshape(2, -1, n // 2, h, w)
+        return torch.cat((y[0], y[1]), 1)
+
+
+class GSBottleneck(nn.Module):
+    """GSConv-based bottleneck used inside VoVGSCSP."""
+
+    def __init__(self, c1, c2, k=3, s=1):
+        super().__init__()
+        c_ = c2 // 2
+        self.conv_lighting = nn.Sequential(
+            GSConv(c1, c_, 1, 1),
+            GSConv(c_, c2, 3, 1, act=False),
+        )
+        self.shortcut = Conv(c1, c2, 1, 1, act=False) if c1 != c2 else nn.Identity()
+
+    def forward(self, x):
+        return self.conv_lighting(x) + self.shortcut(x)
+
+
+class VoVGSCSP(nn.Module):
+    """VoV-GSCSP: CSP block built from GSConv/GSBottleneck, drop-in replacement for C3k2 in the neck."""
+
+    def __init__(self, c1, c2, n=1, shortcut=True, g=1, e=0.5):
+        super().__init__()
+        c_ = int(c2 * e)
+        self.cv1 = Conv(c1, c_, 1, 1)
+        self.cv2 = Conv(c1, c_, 1, 1)
+        self.gsb = nn.Sequential(*(GSBottleneck(c_, c_) for _ in range(n)))
+        self.cv3 = Conv(2 * c_, c2, 1, 1)
+
+    def forward(self, x):
+        x1 = self.gsb(self.cv1(x))
+        x2 = self.cv2(x)
+        return self.cv3(torch.cat((x1, x2), 1))
