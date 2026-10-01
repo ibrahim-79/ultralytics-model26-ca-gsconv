@@ -73,12 +73,12 @@ from ultralytics.nn.modules import (
     Segment26,
     SemanticSegment,
     TorchVision,
+    VoVGSCSP,
     WorldDetect,
     YOLOEDetect,
     YOLOESegment,
     YOLOESegment26,
     v10Detect,
-    VoVGSCSP,
 )
 from ultralytics.utils import (
     DEFAULT_CFG_DICT,
@@ -2118,7 +2118,7 @@ def parse_model(d, ch, verbose=True):
             c2 = ch[f[-1]]
         elif m is CoordAtt:
             c2 = ch[f]
-            args = [c2, *args]   
+            args = [c2, *args]
         elif m in frozenset({TorchVision, Index}):
             c2 = args[0]
             c1 = ch[f]
