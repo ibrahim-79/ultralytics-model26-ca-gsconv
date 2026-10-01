@@ -47,7 +47,7 @@ from .block import (
     CBFuse,
     CBLinear,
     ContrastiveHead,
-    CoordAtt,          # <-- add this
+    CoordAtt,  # <-- add this
     GhostBottleneck,
     GSConv,
     HGBlock,
@@ -149,10 +149,10 @@ __all__ = (
     "Classify",
     "Concat",
     "ContrastiveHead",
-    "CoordAtt",
     "Conv",
     "Conv2",
     "ConvTranspose",
+    "CoordAtt",
     "DWConv",
     "DWConvTranspose2d",
     "DeformableTransformerDecoder",
@@ -160,9 +160,9 @@ __all__ = (
     "Depth",
     "Detect",
     "Focus",
+    "GSConv",
     "GhostBottleneck",
     "GhostConv",
-    "GSConv",
     "HGBlock",
     "HGStem",
     "ImagePoolingAttn",
@@ -191,12 +191,10 @@ __all__ = (
     "TransformerBlock",
     "TransformerEncoderLayer",
     "TransformerLayer",
+    "VoVGSCSP",
     "WorldDetect",
     "YOLOEDetect",
     "YOLOESegment",
     "YOLOESegment26",
     "v10Detect",
-    "VoVGSCSP",
-    
 )
-
